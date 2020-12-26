@@ -4,7 +4,7 @@ This repository describes the hardware part behind a Kindle 4 based eink dashboa
 
 A lovelace UI panel of your Home Assistant instance is rendered to an image and polled from a jailbroken Kindle 4 on a regular basis.
 
-![Outside photo](https://raw.githubusercontent.com/sibbl/hass-lovelace-kindle-4/main/assets/outside.jpg)
+![Outside photo](https://raw.githubusercontent.com/sibbl/hass-lovelace-kindle-4/main/assets/front.jpg)
 
 ## Software
 
