@@ -15,11 +15,11 @@ I keep this short as I think this should be pretty straight forward.
 
 Hint 1: there's an `eink` HA theme inside this repository which you can configure for your newly created panel.
 
-Hint 2: I recommend installing this kiosk extension (i.e. via HACS) to remove the UI app header bar.
+Hint 2: I recommend installing this [kiosk mode extension](https://github.com/maykar/kiosk-mode) (i.e. via [HACS](https://hacs.xyz/)) to remove the UI app header bar.
 
 You should end up with a URL pointing to the exposed port from the docker container to configure on your kindle in the following section.
 
-Important: this URL needs to be plain HTTP as no TLS or SSL is supported by the Kindle 4. If your server is HTTPS only (which is a good thing!), I recommend using a free CDN like [hostry](https://www.hostry.com).
+Important: this URL needs to be plain HTTP as no TLS or SSL is supported by the Kindle 4. If your server is HTTPS only (which is a good thing!), I recommend using a free CDN like [Hostry](https://www.hostry.com).
 
 ## Hardware
 
@@ -36,7 +36,7 @@ Thus, a bit more work was necessary to get a reliable solution which I describe 
 1. Copy KUAL v1 azw file into `/mnt/us/documents` [as described here](https://www.mobileread.com/forums/showthread.php?t=203326).
 1. Clone this repository. **Important for Windows users**: ensure that the `*.sh` files have LF line endings and NOT CRLF.
 1. Set the variables at the top of this repository's `extensions/homeassistant/script.sh`.
-    - If you want to run the device on battery, I recommend increasing the `INTERVAL` (so that it suspends longer) and decrease `DELAY_BEFORE_SUSPEND` so that the (artificial) delay between drawing the image and suspending is as low as possible. But please keep in mind that this wasn't what I've built the script for. E.g. the online screensaver extension supports configuring a scheduler to run less frequent at night and save battery.
+   - If you want to run the device on battery, I recommend increasing the `INTERVAL` (so that it suspends longer) and decrease `DELAY_BEFORE_SUSPEND` so that the (artificial) delay between drawing the image and suspending is as low as possible. But please keep in mind that this wasn't what I've built the script for. E.g. the online screensaver extension supports configuring a scheduler to run less frequent at night and save battery.
 1. Copy `homeassistant` and `kite` folders from this repository into `/mnt/us/` on the device.
 1. Reboot your device and the script should run 2 minutes after sucessful boot.
 
