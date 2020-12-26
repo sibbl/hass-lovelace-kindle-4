@@ -1,0 +1,9 @@
+{
+	"items": [
+		{"name": "Home Assistant",
+			"items" : [
+				{"name": "Run",            "priority":0, "action": "script.sh"}
+			]
+		}
+	]
+}
