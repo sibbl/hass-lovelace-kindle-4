@@ -57,7 +57,7 @@ while true; do
 
     ### wait for wifi
     while wait_wlan; do
-        if [ ${WLANCOUNTER} -gt 5]; then
+        if [ ${WLANCOUNTER} -gt 5 ]; then
             logger "Trying Wifi reconnect"
             /usr/bin/wpa_cli -i $NET reconnect
         fi
@@ -92,7 +92,7 @@ while true; do
 
         ### wait for working ping
         while wait_ping; do
-            if [ ${PINGCOUNTER} -gt 5]; then
+            if [ ${PINGCOUNTER} -gt 5 ]; then
                 logger "Trying Wifi reconnect"
                 /usr/bin/wpa_cli -i $NET reconnect
             fi
