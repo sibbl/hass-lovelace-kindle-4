@@ -11,6 +11,7 @@ PINGHOST="www.google.com"               # which domain (or IP) to ping to check 
 ROUTERIP="192.168.0.1"                  # router gateway IP. The Kindle appears to sometimes forget the gateway's IP and we need to set this manually.
 LOGGING=1                               # if enabled, the script logs into a file
 DELAY_BEFORE_SUSPEND=10                 # seconds to wait between drawing image and suspending. This gives you time to SSH into your device if it's inside the photo frame and stop the daemon
+RESTART_POWERD_THRESHOLD=50 # restart powerd if battery percentage is below this value, if a power source is connected and the charging current is negative
 
 NAME=homeassistant
 NAMEOLD=homeassistant_old

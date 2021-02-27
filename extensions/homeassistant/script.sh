@@ -34,7 +34,19 @@ while true; do
     lipc-set-prop com.lab126.powerd preventScreenSaver 1
 
     echo "Check battery level"
+
+    CHARGING_FILE=`kdb get system/driver/charger/SYS_CHARGING_FILE`
+    IS_CHARGING=$(cat $CHARGING_FILE)
     CHECKBATTERY=$(gasgauge-info -s | sed 's/.$//')
+    CHECKCHARGECURRENT=$(gasgauge-info -l | sed 's/mA//g')
+    
+	logger "Battery: isCharging=${IS_CHARGING} percentage=${CHECKBATTERY}% current=${CHECKCHARGECURRENT}mA" 
+
+    if [ ${IS_CHARGING} -eq 1 ] && [ ${CHECKBATTERY} -le ${RESTART_POWERD_THRESHOLD} ] && [ ${CHECKCHARGECURRENT} -le 0 ]; then
+        logger "Restarting powerd"
+        /etc/init.d/powerd restart
+    fi
+    
     if [ ${CHECKBATTERY} -le ${BATTERYLOW} ]; then
         logger "Battery below ${BATTERYLOW}"
         eips -f -g "${LIMGBATT}"
