@@ -116,7 +116,7 @@ while true; do
                 logger "DEBUG signalStrength $(lipc-get-prop com.lab126.wifid signalStrength)"
                 eips -f -g "${LIMGERRWIFI}"
                 PINGNOTWORKING=1
-                SHORTSUSPEND=1 #short sleeptime will be activated
+                ERROR_SUSPEND=1 #short sleeptime will be activated
                 break 1
             fi
             let PINGCOUNTER=PINGCOUNTER+1
