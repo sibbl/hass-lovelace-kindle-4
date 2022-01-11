@@ -15,7 +15,7 @@ I keep this short as I think this should be pretty straight forward.
 
 Hints:
 
-1. there's an `eink` HA theme inside this repository which you can configure for your newly created panel.
+1. there's an [`eink` HA theme](https://github.com/sibbl/hass-lovelace-kindle-screensaver/blob/main/lovelace-eink-theme.yml) inside the rendering software repository which you can configure for your newly created panel.
 2. I recommend installing this [kiosk mode extension](https://github.com/maykar/kiosk-mode) (i.e. via [HACS](https://hacs.xyz/)) to remove the UI app header bar.
 
 **Finally**, You should end up with a URL pointing to the exposed port of the rendering docker container to configure this on your kindle as described in the following section.
