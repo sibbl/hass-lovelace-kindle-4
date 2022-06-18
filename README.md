@@ -36,7 +36,7 @@ Thus, a bit more work was necessary to get a reliable solution for a good Kindle
 1. Copy KUAL v1 azw file into `/mnt/us/documents` [as described here](https://www.mobileread.com/forums/showthread.php?t=203326).
 1. Install kite so that we can start our script on each boot. [See download including instructions here](https://www.mobileread.com/forums/showthread.php?t=168270) - you can simply use [this prebuilt package for K4](https://www.mobileread.com/forums/showpost.php?p=2373973&postcount=73) OR SSH into your device and run the `kite.sh` from the `kite.gz` download.
 1. Clone this repository. **Important for Windows users**: ensure that the `*.sh` files have LF line endings and NOT CRLF.
-1. Set the variables at the top of this repository's `extensions/homeassistant/script.sh`.
+1. Set the variables inside this repository's `extensions/homeassistant/config.sh`.
    - If you want to run the device on battery, I recommend increasing the `INTERVAL` (so that it suspends longer) and decrease `DELAY_BEFORE_SUSPEND` so that the (artificial) delay between drawing the image and suspending is as low as possible. But please keep in mind that this wasn't what I've built the script for. E.g. the online screensaver extension supports configuring a scheduler to run less frequent at night and save battery.
 1. Copy `homeassistant` and `kite` folders from this repository into `/mnt/us/` on the device.
 1. Reboot your device and the script should run 2 minutes after booting up via kite. That's it.
