@@ -40,7 +40,7 @@ while true; do
     CHECKBATTERY=$(gasgauge-info -s | sed 's/.$//')
     CHECKCHARGECURRENT=$(gasgauge-info -l | sed 's/mA//g')
     
-	logger "Battery: isCharging=${IS_CHARGING} percentage=${CHECKBATTERY}% current=${CHECKCHARGECURRENT}mA" 
+    logger "Battery: isCharging=${IS_CHARGING} percentage=${CHECKBATTERY}% current=${CHECKCHARGECURRENT}mA" 
 
     if [ ${IS_CHARGING} -eq 1 ] && [ ${CHECKBATTERY} -le ${RESTART_POWERD_THRESHOLD} ] && [ ${CHECKCHARGECURRENT} -le 0 ]; then
         logger "Restarting powerd"
@@ -91,13 +91,13 @@ while true; do
     if [ ${WLANNOTCONNECTED} -eq 0 ]; then
         logger "Connected to wifi"
 
-        ### lost standard gateway if wifi is not available
-        GATEWAY=$(ip route | grep default | grep ${NET} | awk '{print $3}')
-        logger "Found default gateway ${GATEWAY}"
-        if [ -z "${GATEWAY}" ]; then
-            route add default gw ${ROUTERIP}
-            logger "Default gateway lost after sleep"
-            logger "Setting default gateway to ${ROUTERIP}"
+        ### ensure default gateway
+        GATEWAY=$(ip route | grep default | awk '{print $3}')
+        if [ -z "${GATEWAY}" ] || [ "${GATEWAY}" != "${ROUTERIP}" ]; then
+            logger "Default gateway missing or incorrect, setting to ${ROUTERIP}"
+            ip route replace default via ${ROUTERIP} dev ${NET}
+        else
+            logger "Default gateway ok: ${GATEWAY}"
         fi
 
         echo "ping"
@@ -121,8 +121,12 @@ while true; do
             fi
             let PINGCOUNTER=PINGCOUNTER+1
             logger "Waiting for working ping ${PINGCOUNTER}"
-            logger "Trying to set route gateway to ${ROUTERIP}"
-            route add default gw ${ROUTERIP}
+
+            GATEWAY=$(ip route | grep default | awk '{print $3}')
+            if [ -z "${GATEWAY}" ] || [ "${GATEWAY}" != "${ROUTERIP}" ]; then
+                logger "Default gateway missing or incorrect, setting to ${ROUTERIP}"
+                ip route replace default via ${ROUTERIP} dev ${NET}
+            fi
             sleep $PINGCOUNTER
         done
 
