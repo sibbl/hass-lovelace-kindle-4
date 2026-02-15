@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 DAEMON_PATH="/mnt/us/extensions/homeassistant"
 
