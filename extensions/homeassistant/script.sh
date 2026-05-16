@@ -130,10 +130,11 @@ while true; do
             logger "Ping worked successfully"
 
             echo "Downloading and drawing image"
-            DOWNLOADRESULT=$(wget -q "$IMAGE_URI" -O $TMPFILE)
+            DOWNLOADRESULT=$(download_image 2>&1)
+            DOWNLOADSTATUS=$?
             logger "Download result ${DOWNLOADRESULT}"
-            echo $DOWNLOADRESULT
-            if $DOWNLOADRESULT; then
+            echo "$DOWNLOADRESULT"
+            if [ ${DOWNLOADSTATUS} -eq 0 ]; then
                 mv $TMPFILE $SCREENSAVERFILE
                 logger "Screen saver image file updated"
                 if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then

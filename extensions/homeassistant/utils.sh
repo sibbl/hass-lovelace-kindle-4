@@ -25,6 +25,23 @@ wait_ping() {
     return $CONNECTED
 }
 
+download_image() {
+    DOWNLOAD_URI=$IMAGE_URI
+
+    if [ -n "$BASIC_AUTH_USERNAME" ] || [ -n "$BASIC_AUTH_PASSWORD" ]; then
+        case "$IMAGE_URI" in
+        http://*)
+            DOWNLOAD_URI="http://${BASIC_AUTH_USERNAME}:${BASIC_AUTH_PASSWORD}@${IMAGE_URI#http://}"
+            ;;
+        *)
+            logger "Basic auth is configured, but IMAGE_URI does not start with http://"
+            ;;
+        esac
+    fi
+
+    wget -q "$DOWNLOAD_URI" -O "$TMPFILE"
+}
+
 logger() {
     MSG=$1
 
