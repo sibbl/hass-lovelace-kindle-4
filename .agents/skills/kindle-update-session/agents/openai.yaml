@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kindle Update Session"
+  short_description: "Connect to an installed Kindle for updates."
+  default_prompt: "Guide a maintenance SSH session for an already installed Kindle dashboard."

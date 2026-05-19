@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kindle Initial Setup"
+  short_description: "Set up a Kindle 4 Home Assistant dashboard from this repo."
+  default_prompt: "Guide the initial setup of this Kindle Home Assistant dashboard."
