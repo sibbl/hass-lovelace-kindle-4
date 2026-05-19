@@ -100,64 +100,65 @@ while true; do
             logger "Setting default gateway to ${ROUTERIP}"
         fi
 
-        echo "ping"
+        if [ -n "${PINGHOST}" ]; then
+            echo "ping"
 
-        ### wait for working ping
-        while wait_ping; do
-            if [ ${PINGCOUNTER} -gt 5 ]; then
-                logger "Trying Wifi reconnect"
-                /usr/bin/wpa_cli -i $NET reconnect
-            fi
-            if [ ${PINGCOUNTER} -gt 10 ]; then
-                logger "Ping not working"
-                logger "DEBUG ifconfig $(ifconfig ${NET})"
-                CMSTATE=$(lipc-get-prop com.lab126.wifid cmState)
-                logger "DEBUG cmState ${CMSTATE}"
-                logger "DEBUG signalStrength $(lipc-get-prop com.lab126.wifid signalStrength)"
-                eips -f -g "${LIMGERRWIFI}"
-                PINGNOTWORKING=1
-                ERROR_SUSPEND=1 #short sleeptime will be activated
-                break 1
-            fi
-            let PINGCOUNTER=PINGCOUNTER+1
-            logger "Waiting for working ping ${PINGCOUNTER}"
-            logger "Trying to set route gateway to ${ROUTERIP}"
-            route add default gw ${ROUTERIP}
-            sleep $PINGCOUNTER
-        done
-
-        if [ ${PINGNOTWORKING} -eq 0 ]; then
-            logger "Ping worked successfully"
-
-            echo "Downloading and drawing image"
-            DOWNLOADRESULT=$(download_image 2>&1)
-            DOWNLOADSTATUS=$?
-            logger "Download result ${DOWNLOADRESULT}"
-            echo "$DOWNLOADRESULT"
-            if [ ${DOWNLOADSTATUS} -eq 0 ]; then
-                mv $TMPFILE $SCREENSAVERFILE
-                logger "Screen saver image file updated"
-                if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
-                    eips -c
-                    sleep 1
+            ### wait briefly for network reachability, but don't treat ping as the source of truth
+            while wait_ping; do
+                if [ ${PINGCOUNTER} -gt 3 ]; then
+                    logger "Trying Wifi reconnect"
+                    /usr/bin/wpa_cli -i $NET reconnect
                 fi
-                eips -f -g ${SCREENSAVERFILE}
-            else
-                logger "Error updating screensaver"
-                if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
-                    eips -c
-                    sleep 1
+                if [ ${PINGCOUNTER} -gt 5 ]; then
+                    logger "Ping not working, continuing with image download"
+                    logger "DEBUG ifconfig $(ifconfig ${NET})"
+                    CMSTATE=$(lipc-get-prop com.lab126.wifid cmState)
+                    logger "DEBUG cmState ${CMSTATE}"
+                    logger "DEBUG signalStrength $(lipc-get-prop com.lab126.wifid signalStrength)"
+                    break 1
                 fi
-                eips -f -g ${LIMGERR} #show error picture
-                ERROR_SUSPEND=1       #short sleep time will be activated
-            fi
+                let PINGCOUNTER=PINGCOUNTER+1
+                logger "Waiting for working ping ${PINGCOUNTER}"
+                logger "Trying to set route gateway to ${ROUTERIP}"
+                route add default gw ${ROUTERIP}
+                sleep $PINGCOUNTER
+            done
 
-            rm ${TMPFILE} -f
-            logger "Removed temporary files"
-
-            if [ ${CHECKBATTERY} -le ${BATTERYALERT} ]; then
-                eips 2 2 -h " Battery at ${CHECKBATTERY}%, please charge "
+            if [ ${PINGCOUNTER} -le 5 ]; then
+                logger "Ping worked successfully"
             fi
+        else
+            logger "PINGHOST is empty, skipping ping check"
+        fi
+
+        echo "Downloading and drawing image"
+        DOWNLOADRESULT=$(download_image 2>&1)
+        DOWNLOADSTATUS=$?
+        logger "Download result ${DOWNLOADRESULT}"
+        echo "$DOWNLOADRESULT"
+        if [ ${DOWNLOADSTATUS} -eq 0 ]; then
+            mv $TMPFILE $SCREENSAVERFILE
+            logger "Screen saver image file updated"
+            if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
+                eips -c
+                sleep 1
+            fi
+            eips -f -g ${SCREENSAVERFILE}
+        else
+            logger "Error updating screensaver"
+            if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
+                eips -c
+                sleep 1
+            fi
+            eips -f -g ${LIMGERR} #show error picture
+            ERROR_SUSPEND=1       #short sleep time will be activated
+        fi
+
+        rm ${TMPFILE} -f
+        logger "Removed temporary files"
+
+        if [ ${CHECKBATTERY} -le ${BATTERYALERT} ]; then
+            eips 2 2 -h " Battery at ${CHECKBATTERY}%, please charge "
         fi
     fi
 

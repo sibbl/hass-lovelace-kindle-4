@@ -1,9 +1,9 @@
 #!/bin/sh
 
 INTERVAL=60                             # (sec) - how often to update the script
-IMAGE_URI="http://example.org/test.png" # URL of image to fetch. Keep in mind that the Kindle 4 does not support SSL/TLS requests
-BASIC_AUTH_USERNAME=""                  # Optional HTTP Basic Auth username for IMAGE_URI. Leave empty to disable.
-BASIC_AUTH_PASSWORD=""                  # Optional HTTP Basic Auth password for IMAGE_URI. Leave empty to disable.
+IMAGE_URI="http://hass-kindle-screensaver.sibbl.net/" # URL of image to fetch. Keep in mind that the Kindle 4 does not support SSL/TLS requests
+BASIC_AUTH_USERNAME="kindle-screensaver" # Optional HTTP Basic Auth username for IMAGE_URI. Leave empty to disable.
+BASIC_AUTH_PASSWORD="mD7FMtNWrEEKPravq43x" # Optional HTTP Basic Auth password for IMAGE_URI. Leave empty to disable.
 CLEAR_SCREEN_BEFORE_RENDER=0            # If "1", then the screen is completely cleared before rendering the newly fetched image to avoid "shadows".
 INTERVAL_ON_ERROR=30                    # In case of errors, the device waits this long until the next loop.
 BATTERYALERT=15                         # if the battery level is equal to or below this threshold, a info will be displayed

@@ -14,7 +14,7 @@ case "$1" in
 start)
 	printf "%-50s" "Starting $NAME..."
 	cd $DAEMON_PATH
-	PID=`$DAEMON $DAEMONOPTS > /dev/null 2>&1 & echo $!`
+	PID=`$DAEMON $DAEMONOPTS > /dev/null 2>&1 < /dev/null & echo $!`
 	#echo "Saving PID" $PID " to " $PIDFILE
         if [ -z $PID ]; then
             printf "%s\n" "Fail"
@@ -41,10 +41,21 @@ stop)
             cd $DAEMON_PATH
         if [ -f $PIDFILE ]; then
             PID=`cat $PIDFILE`
-            kill -HUP $PID
+            kill $PID
+            sleep 1
+            PIDS=`ps | grep "[s]cript.sh" | awk '{print $1}'`
+            if [ -n "$PIDS" ]; then
+                kill $PIDS
+                sleep 1
+            fi
             printf "%s\n" "Ok"
             rm -f $PIDFILE
         else
+            PIDS=`ps | grep "[s]cript.sh" | awk '{print $1}'`
+            if [ -n "$PIDS" ]; then
+                kill $PIDS
+                sleep 1
+            fi
             printf "%s\n" "pidfile not found"
         fi
 ;;
