@@ -38,9 +38,9 @@ status)
 ;;
 stop)
         printf "%-50s" "Stopping $NAME"
-            PID=`cat $PIDFILE`
             cd $DAEMON_PATH
         if [ -f $PIDFILE ]; then
+            PID=`cat $PIDFILE`
             kill -HUP $PID
             printf "%s\n" "Ok"
             rm -f $PIDFILE
