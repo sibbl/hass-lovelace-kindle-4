@@ -24,7 +24,7 @@ Use this skill to keep an SSH session alive long enough to inspect, debug, or up
 .agents/skills/kindle-update-session/scripts/kindle-update-session.sh deploy
 ```
 
-The script defaults to `KINDLE_HOST=192.168.0.172` and `KINDLE_USER=root`. It waits for SSH, cancels a pending `startup.sh`, stops the daemon if present, copies `extensions/homeassistant` and `kite`, restarts the daemon, and prints status/log output.
+The script defaults to `KINDLE_HOST=192.168.0.172` and `KINDLE_USER=root`. It waits for SSH, cancels a pending `startup.sh`, stops the daemon and any leftover `script.sh` processes if present, copies `extensions/homeassistant` and `kite`, restarts the daemon, and prints process/service status.
 
 The script expects non-interactive SSH by default. If it reports `Permission denied (publickey,password)`, configure an SSH key for `root@KINDLE_HOST` first, or run with `KINDLE_SSH_BATCH_MODE=no` for an interactive password prompt:
 
@@ -64,6 +64,8 @@ PID=$(ps | grep '[s]tartup.sh' | awk '{print $1}')
 ```sh
 ps | grep '[s]cript.sh'
 sh /mnt/us/extensions/homeassistant/daemon.sh stop
+PIDS=$(ps | grep '[s]cript.sh' | awk '{print $1}')
+[ -n "$PIDS" ] && kill -HUP $PIDS
 ```
 
 6. Confirm the device should stay reachable:
@@ -79,7 +81,7 @@ Expected result: no `startup.sh` process, no `script.sh` render loop, and the da
 7. Inspect logs and state as needed:
 
 ```sh
-tail -n 100 /mnt/us/extensions/homeassistant/homeassistant.log
+[ -f /mnt/us/extensions/homeassistant/homeassistant.log ] && tail -100 /mnt/us/extensions/homeassistant/homeassistant.log
 cat /mnt/us/extensions/homeassistant/config.sh
 ls -la /mnt/us/extensions/homeassistant
 ```
@@ -87,8 +89,8 @@ ls -la /mnt/us/extensions/homeassistant
 8. Copy updates from the local machine. Prefer `rsync` when available locally; fall back to `scp` if needed:
 
 ```sh
-rsync -av extensions/homeassistant/ root@KINDLE_HOST:/mnt/us/extensions/homeassistant/
-rsync -av kite/ root@KINDLE_HOST:/mnt/us/kite/
+rsync -rltv --no-owner --no-group --no-perms extensions/homeassistant/ root@KINDLE_HOST:/mnt/us/extensions/homeassistant/
+rsync -rltv --no-owner --no-group --no-perms kite/ root@KINDLE_HOST:/mnt/us/kite/
 ```
 
 9. Restart and validate on the Kindle:
@@ -96,7 +98,7 @@ rsync -av kite/ root@KINDLE_HOST:/mnt/us/kite/
 ```sh
 sh /mnt/us/extensions/homeassistant/daemon.sh start
 sh /mnt/us/extensions/homeassistant/daemon.sh status
-tail -n 100 /mnt/us/extensions/homeassistant/homeassistant.log
+[ -f /mnt/us/extensions/homeassistant/homeassistant.log ] && tail -100 /mnt/us/extensions/homeassistant/homeassistant.log
 ```
 
 ## Choosing The Connection Window

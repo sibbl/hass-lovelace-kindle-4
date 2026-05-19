@@ -90,8 +90,8 @@ remote_status() {
         ps | grep "[s]cript.sh" || true
         echo "== daemon =="
         sh /mnt/us/extensions/homeassistant/daemon.sh status || true
-        echo "== recent log =="
-        tail -n 20 /mnt/us/extensions/homeassistant/homeassistant.log 2>/dev/null || true
+        echo "== log file =="
+        ls -l /mnt/us/extensions/homeassistant/homeassistant.log 2>/dev/null || true
     '
 }
 
@@ -104,6 +104,13 @@ remote_stop() {
         echo "Stopping homeassistant daemon if present"
         sh /mnt/us/extensions/homeassistant/daemon.sh stop || true
 
+        echo "Stopping leftover script.sh processes if present"
+        PIDS=$(ps | grep "[s]cript.sh" | awk "{print \$1}")
+        [ -n "$PIDS" ] && kill $PIDS || true
+        sleep 1
+        PIDS=$(ps | grep "[s]cript.sh" | awk "{print \$1}")
+        [ -n "$PIDS" ] && kill -9 $PIDS || true
+
         echo "Remaining dashboard processes"
         ps | grep "[s]tartup.sh" || true
         ps | grep "[s]cript.sh" || true
@@ -113,12 +120,12 @@ remote_stop() {
 copy_updates() {
     if command -v rsync >/dev/null 2>&1; then
         log "Copying extensions/homeassistant with rsync"
-        rsync -av -e "ssh $SSH_OPTS" \
+        rsync -rltv --no-owner --no-group --no-perms -e "ssh $SSH_OPTS" \
             "$REPO_ROOT/extensions/homeassistant/" \
             "$KINDLE_TARGET:/mnt/us/extensions/homeassistant/"
 
         log "Copying kite with rsync"
-        rsync -av -e "ssh $SSH_OPTS" \
+        rsync -rltv --no-owner --no-group --no-perms -e "ssh $SSH_OPTS" \
             "$REPO_ROOT/kite/" \
             "$KINDLE_TARGET:/mnt/us/kite/"
     else
@@ -131,7 +138,7 @@ copy_updates() {
 remote_start() {
     run_ssh '
         echo "Starting homeassistant daemon"
-        sh /mnt/us/extensions/homeassistant/daemon.sh start
+        sh /mnt/us/extensions/homeassistant/daemon.sh start </dev/null
         sh /mnt/us/extensions/homeassistant/daemon.sh status || true
     '
 }
