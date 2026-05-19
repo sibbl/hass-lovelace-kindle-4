@@ -11,6 +11,9 @@ REPO_ROOT=${REPO_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)}
 ACTION=${1:-deploy}
 KINDLE_SSH_BATCH_MODE=${KINDLE_SSH_BATCH_MODE:-yes}
 KINDLE_SSH_EXTRA_OPTS=${KINDLE_SSH_EXTRA_OPTS:-}
+DEPLOY_CONFIG=${DEPLOY_CONFIG:-no}
+CONFIRM_DEPLOY_CONFIG=${CONFIRM_DEPLOY_CONFIG:-no}
+CONFIG_BACKUP_DIR=${CONFIG_BACKUP_DIR:-"$REPO_ROOT/.git/kindle-update-session-backups"}
 
 SSH_OPTS="-o BatchMode=${KINDLE_SSH_BATCH_MODE} -o ConnectTimeout=3 -o ConnectionAttempts=1 -o StrictHostKeyChecking=accept-new ${KINDLE_SSH_EXTRA_OPTS}"
 
@@ -28,6 +31,13 @@ Environment:
                   Use "no" to allow interactive password prompts (default: yes)
   KINDLE_SSH_EXTRA_OPTS
                   Extra options passed to ssh/scp/rsync ssh
+  DEPLOY_CONFIG   Set to "yes" to overwrite config.sh on the Kindle (default: no)
+  CONFIRM_DEPLOY_CONFIG
+                  Must also be "yes" when DEPLOY_CONFIG=yes. The script first
+                  reads and backs up the remote config, then overwrites it.
+  CONFIG_BACKUP_DIR
+                  Local directory for remote config backups
+                  (default: .git/kindle-update-session-backups)
 
 Actions:
   wait     Wait until SSH is available.
@@ -117,10 +127,57 @@ remote_stop() {
     '
 }
 
+backup_remote_config() {
+    TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
+    LOCAL_BACKUP="${CONFIG_BACKUP_DIR}/config.${KINDLE_HOST}.${TIMESTAMP}.sh"
+    REMOTE_BACKUP="/mnt/us/extensions/homeassistant/config.sh.backup.${TIMESTAMP}"
+
+    mkdir -p "$CONFIG_BACKUP_DIR"
+
+    log "Reading current remote config before any config deploy"
+    if ! run_ssh 'test -f /mnt/us/extensions/homeassistant/config.sh'; then
+        log "Remote config.sh does not exist; refusing to deploy config automatically"
+        return 1
+    fi
+
+    if ! ssh $SSH_OPTS "$KINDLE_TARGET" 'cat /mnt/us/extensions/homeassistant/config.sh' >"$LOCAL_BACKUP"; then
+        log "Could not read remote config.sh; refusing to deploy config"
+        return 1
+    fi
+
+    run_ssh "cp /mnt/us/extensions/homeassistant/config.sh '$REMOTE_BACKUP'"
+    log "Saved local remote-config backup to $LOCAL_BACKUP"
+    log "Saved Kindle remote-config backup to $REMOTE_BACKUP"
+    log "Current remote config follows:"
+    sed -n '1,80p' "$LOCAL_BACKUP"
+}
+
+guard_config_deploy() {
+    if [ "$DEPLOY_CONFIG" != "yes" ]; then
+        return 0
+    fi
+
+    backup_remote_config || return 1
+
+    if [ "$CONFIRM_DEPLOY_CONFIG" != "yes" ]; then
+        log "Refusing to overwrite config.sh without CONFIRM_DEPLOY_CONFIG=yes"
+        log "Review the backup above, then rerun with DEPLOY_CONFIG=yes CONFIRM_DEPLOY_CONFIG=yes if overwrite is intended"
+        return 1
+    fi
+
+    log "Config overwrite explicitly confirmed"
+}
+
 copy_updates() {
+    RSYNC_EXCLUDES=""
+    if [ "$DEPLOY_CONFIG" != "yes" ]; then
+        RSYNC_EXCLUDES="--exclude config.sh"
+    fi
+
     if command -v rsync >/dev/null 2>&1; then
         log "Copying extensions/homeassistant with rsync"
         rsync -rltv --no-owner --no-group --no-perms -e "ssh $SSH_OPTS" \
+            $RSYNC_EXCLUDES \
             "$REPO_ROOT/extensions/homeassistant/" \
             "$KINDLE_TARGET:/mnt/us/extensions/homeassistant/"
 
@@ -130,7 +187,15 @@ copy_updates() {
             "$KINDLE_TARGET:/mnt/us/kite/"
     else
         log "rsync not found; copying with scp"
-        scp $SSH_OPTS -r "$REPO_ROOT/extensions/homeassistant" "$KINDLE_TARGET:/mnt/us/extensions/"
+        if [ "$DEPLOY_CONFIG" = "yes" ]; then
+            scp $SSH_OPTS -r "$REPO_ROOT/extensions/homeassistant" "$KINDLE_TARGET:/mnt/us/extensions/"
+        else
+            run_ssh 'mkdir -p /mnt/us/extensions/homeassistant'
+            for FILE in "$REPO_ROOT"/extensions/homeassistant/*; do
+                [ "$(basename "$FILE")" = "config.sh" ] && continue
+                scp $SSH_OPTS -r "$FILE" "$KINDLE_TARGET:/mnt/us/extensions/homeassistant/"
+            done
+        fi
         scp $SSH_OPTS -r "$REPO_ROOT/kite" "$KINDLE_TARGET:/mnt/us/"
     fi
 }
@@ -151,7 +216,7 @@ stop)
     wait_for_ssh && remote_stop && remote_status
     ;;
 deploy)
-    wait_for_ssh && remote_stop && copy_updates && remote_start && remote_status
+    wait_for_ssh && guard_config_deploy && remote_stop && copy_updates && remote_start && remote_status
     ;;
 start)
     wait_for_ssh && remote_start && remote_status

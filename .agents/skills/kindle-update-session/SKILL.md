@@ -26,6 +26,22 @@ Use this skill to keep an SSH session alive long enough to inspect, debug, or up
 
 The script defaults to `KINDLE_HOST=192.168.0.172` and `KINDLE_USER=root`. It waits for SSH, cancels a pending `startup.sh`, stops the daemon and any leftover `script.sh` processes if present, copies `extensions/homeassistant` and `kite`, restarts the daemon, and prints process/service status.
 
+By default it does not overwrite `/mnt/us/extensions/homeassistant/config.sh`, because that file contains device-specific settings.
+
+Never overwrite the Kindle's `config.sh` blindly. Before any config deploy, read the current remote file and preserve a backup. The bundled script enforces this: `DEPLOY_CONFIG=yes` first reads the Kindle config, writes a local backup under `.git/kindle-update-session-backups/`, writes a remote backup next to the original config, and prints the current remote config. It then refuses to overwrite unless `CONFIRM_DEPLOY_CONFIG=yes` is also set.
+
+Use `DEPLOY_CONFIG=yes` without confirmation only to inspect and back up the current Kindle config:
+
+```sh
+DEPLOY_CONFIG=yes .agents/skills/kindle-update-session/scripts/kindle-update-session.sh deploy
+```
+
+Use both flags only after reviewing the printed remote config and intentionally deciding to replace it:
+
+```sh
+DEPLOY_CONFIG=yes CONFIRM_DEPLOY_CONFIG=yes .agents/skills/kindle-update-session/scripts/kindle-update-session.sh deploy
+```
+
 The script expects non-interactive SSH by default. If it reports `Permission denied (publickey,password)`, configure an SSH key for `root@KINDLE_HOST` first, or run with `KINDLE_SSH_BATCH_MODE=no` for an interactive password prompt:
 
 ```sh
