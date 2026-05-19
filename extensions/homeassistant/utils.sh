@@ -33,10 +33,10 @@ logger() {
         return
     fi
 
-    # if no logfile is specified, set a default
-    if [ -z $LOGFILE ]; then
-        $LOGFILE=stdout
+    if [ -z "$LOGFILE" ]; then
+        echo "$(date): $MSG"
+        return
     fi
 
-    echo $(date): $MSG >>$LOGFILE
+    echo "$(date): $MSG" >>"$LOGFILE"
 }
