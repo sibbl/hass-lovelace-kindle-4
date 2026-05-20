@@ -11,7 +11,7 @@ kill_kindle() {
 }
 
 customize_kindle() {
-    mkdir /mnt/us/update.bin.tmp.partial -f # prevent from Amazon updates
+    mkdir -p /mnt/us/update.bin.tmp.partial # prevent from Amazon updates
     touch /mnt/us/WIFI_NO_NET_PROBE         # do not perform a WLAN test
 }
 
@@ -29,17 +29,6 @@ download_image() {
     DOWNLOAD_URI=$IMAGE_URI
 
     if [ -n "$BASIC_AUTH_USERNAME" ] || [ -n "$BASIC_AUTH_PASSWORD" ]; then
-        if [ -n "${BASIC_AUTH_HEADER:-}" ] && wget --help 2>&1 | grep -q -- '--header'; then
-            wget -q --header "Authorization: Basic ${BASIC_AUTH_HEADER}" "$IMAGE_URI" -O "$TMPFILE"
-            return $?
-        fi
-
-        if command -v base64 >/dev/null 2>&1 && wget --help 2>&1 | grep -q -- '--header'; then
-            BASIC_AUTH_TOKEN=$(printf '%s:%s' "$BASIC_AUTH_USERNAME" "$BASIC_AUTH_PASSWORD" | base64 | tr -d '\n')
-            wget -q --header "Authorization: Basic ${BASIC_AUTH_TOKEN}" "$IMAGE_URI" -O "$TMPFILE"
-            return $?
-        fi
-
         case "$IMAGE_URI" in
         http://*)
             DOWNLOAD_URI="http://${BASIC_AUTH_USERNAME}:${BASIC_AUTH_PASSWORD}@${IMAGE_URI#http://}"

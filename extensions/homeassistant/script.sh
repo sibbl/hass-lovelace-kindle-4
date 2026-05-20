@@ -1,4 +1,6 @@
 #!/bin/sh
+PATH="/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+export PATH
 
 # load config
 if [ -e "config.sh" ]; then
