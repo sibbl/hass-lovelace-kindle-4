@@ -27,6 +27,7 @@ wait_ping() {
 
 download_image() {
     DOWNLOAD_URI=$IMAGE_URI
+    rm "$TMPFILE" -f
 
     if [ -n "$BASIC_AUTH_USERNAME" ] || [ -n "$BASIC_AUTH_PASSWORD" ]; then
         case "$IMAGE_URI" in
