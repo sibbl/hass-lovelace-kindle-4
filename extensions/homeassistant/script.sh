@@ -107,10 +107,6 @@ while true; do
 
             ### wait briefly for network reachability, but don't treat ping as the source of truth
             while wait_ping; do
-                if [ ${PINGCOUNTER} -gt 3 ]; then
-                    logger "Trying Wifi reconnect"
-                    /usr/bin/wpa_cli -i $NET reconnect
-                fi
                 if [ ${PINGCOUNTER} -gt 5 ]; then
                     logger "Ping not working, continuing with image download"
                     logger "DEBUG ifconfig $(ifconfig ${NET})"
