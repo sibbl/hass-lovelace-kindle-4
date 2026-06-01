@@ -21,7 +21,21 @@ wait_wlan() {
 
 wait_ping() {
     CONNECTED=0
-    /bin/ping -c 1 $PINGHOST >/dev/null && CONNECTED=1
+    PING_TIMEOUT_SECONDS=${PING_TIMEOUT:-10}
+    /bin/ping -c 1 "$PINGHOST" >/dev/null 2>&1 &
+    PING_PID=$!
+    (
+        sleep "$PING_TIMEOUT_SECONDS"
+        kill "$PING_PID" >/dev/null 2>&1
+    ) &
+    PING_WATCHDOG_PID=$!
+
+    wait "$PING_PID"
+    PING_STATUS=$?
+    kill "$PING_WATCHDOG_PID" >/dev/null 2>&1
+    wait "$PING_WATCHDOG_PID" 2>/dev/null
+
+    [ "$PING_STATUS" -eq 0 ] && CONNECTED=1
     return $CONNECTED
 }
 
