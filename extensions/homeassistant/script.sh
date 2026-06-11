@@ -24,6 +24,9 @@ kill_kindle
 customize_kindle
 
 GLOBAL_ERROR_COUNT=0
+CHARGING_ERROR_COUNT=0
+CHARGING_RECOVERY_FILE="${SCRIPTDIR}/charging-recovery-attempts"
+CHARGING_REBOOT_LIMIT=2
 
 while true; do
     echo "Starting new loop"
@@ -45,8 +48,44 @@ while true; do
 	logger "Battery: isCharging=${IS_CHARGING} percentage=${CHECKBATTERY}% current=${CHECKCHARGECURRENT}mA" 
 
     if [ ${IS_CHARGING} -eq 1 ] && [ ${CHECKBATTERY} -le ${RESTART_POWERD_THRESHOLD} ] && [ ${CHECKCHARGECURRENT} -le 0 ]; then
-        logger "Restarting powerd"
-        /etc/init.d/powerd restart
+        let CHARGING_ERROR_COUNT=CHARGING_ERROR_COUNT+1
+        logger "Charging current is negative, attempt ${CHARGING_ERROR_COUNT}"
+        if [ ${CHECKBATTERY} -le ${BATTERYLOW} ]; then
+            logger "Battery is critically low, attempting charging recovery immediately"
+            CHARGING_ERROR_COUNT=3
+        fi
+    else
+        CHARGING_ERROR_COUNT=0
+        rm -f "${CHARGING_RECOVERY_FILE}"
+    fi
+
+    if [ ${CHARGING_ERROR_COUNT} -ge 3 ]; then
+        CHARGING_REBOOT_COUNT=0
+        if [ -s "${CHARGING_RECOVERY_FILE}" ]; then
+            CHARGING_REBOOT_COUNT=$(cat "${CHARGING_RECOVERY_FILE}")
+        fi
+
+        case "${CHARGING_REBOOT_COUNT}" in
+        ''|*[!0-9]*)
+            CHARGING_REBOOT_COUNT=0
+            ;;
+        esac
+
+        if [ ${CHARGING_REBOOT_COUNT} -lt ${CHARGING_REBOOT_LIMIT} ]; then
+            let CHARGING_REBOOT_COUNT=CHARGING_REBOOT_COUNT+1
+            echo "${CHARGING_REBOOT_COUNT}" >"${CHARGING_RECOVERY_FILE}"
+            logger "Charging did not recover, rebooting device (attempt ${CHARGING_REBOOT_COUNT}/${CHARGING_REBOOT_LIMIT})"
+            sync
+            /sbin/reboot
+            sleep 300
+        else
+            logger "Charging did not recover after ${CHARGING_REBOOT_COUNT} reboots, sleeping for ${BATTERYSLEEP} seconds"
+            ./rtcwake -d rtc$RTC -s $BATTERYSLEEP -m mem
+            sleep 30
+        fi
+
+        CHARGING_ERROR_COUNT=0
+        continue
     fi
     
     if [ ${CHECKBATTERY} -le ${BATTERYLOW} ]; then
@@ -54,6 +93,7 @@ while true; do
         eips -f -g "${LIMGBATT}"
         ./rtcwake -d rtc$RTC -s $BATTERYSLEEP -m mem
         sleep 30 # waiting time when charging until battery level is higher than "BATTERYLOW" otherwise it will fall into sleep again
+        continue
     else
         logger "Remaining battery ${CHECKBATTERY}"
     fi
@@ -172,7 +212,7 @@ while true; do
 
         if [ ${GLOBAL_ERROR_COUNT} -ge 10 ]; then
             logger "REBOOT BECAUSE OF 10 ERRORS"
-            reboot
+            /sbin/reboot
         fi
 
         if [ ${USE_RTC} -eq 1 ]; then
