@@ -120,7 +120,11 @@ while true; do
             logger "DEBUG ifconfig $(ifconfig ${NET})"
             logger "DEBUG cmState $(lipc-get-prop com.lab126.wifid cmState)"
             logger "DEBUG signalStrength $(lipc-get-prop com.lab126.wifid signalStrength)"
-            eips -f -g "${LIMGERRWIFI}"
+            if [ -s "${SCREENSAVERFILE}" ]; then
+                logger "Keeping existing screen saver image after wifi error"
+            else
+                eips -f -g "${LIMGERRWIFI}"
+            fi
             WLANNOTCONNECTED=1
             ERROR_SUSPEND=1 #short sleeptime will be activated
             break 1
@@ -184,11 +188,15 @@ while true; do
             eips -f -g ${SCREENSAVERFILE}
         else
             logger "Error updating screensaver"
-            if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
-                eips -c
-                sleep 1
+            if [ -s "${SCREENSAVERFILE}" ]; then
+                logger "Keeping existing screen saver image after download error"
+            else
+                if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
+                    eips -c
+                    sleep 1
+                fi
+                eips -f -g ${LIMGERR} #show error picture
             fi
-            eips -f -g ${LIMGERR} #show error picture
             ERROR_SUSPEND=1       #short sleep time will be activated
         fi
 
@@ -216,7 +224,8 @@ while true; do
         fi
 
         if [ ${USE_RTC} -eq 1 ]; then
-            ./rtcwake -d rtc$RTC -s $INTERVAL_ON_ERROR -m mem
+            logger "Staying awake for error retry for ${INTERVAL_ON_ERROR} seconds"
+            sleep $INTERVAL_ON_ERROR
         else
             sleep $INTERVAL_ON_ERROR
         fi
