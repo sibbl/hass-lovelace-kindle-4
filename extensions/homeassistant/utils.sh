@@ -41,7 +41,8 @@ wait_ping() {
 
 download_image() {
     DOWNLOAD_URI=$IMAGE_URI
-    rm "$TMPFILE" -f
+    DOWNLOAD_TIMEOUT_SECONDS=${DOWNLOAD_TIMEOUT:-45}
+    rm -f "$TMPFILE"
 
     if [ -n "$BASIC_AUTH_USERNAME" ] || [ -n "$BASIC_AUTH_PASSWORD" ]; then
         case "$IMAGE_URI" in
@@ -54,7 +55,20 @@ download_image() {
         esac
     fi
 
-    wget -q "$DOWNLOAD_URI" -O "$TMPFILE"
+    wget -q "$DOWNLOAD_URI" -O "$TMPFILE" &
+    DOWNLOAD_PID=$!
+    (
+        sleep "$DOWNLOAD_TIMEOUT_SECONDS"
+        kill "$DOWNLOAD_PID" >/dev/null 2>&1 && echo "Download timed out after ${DOWNLOAD_TIMEOUT_SECONDS} seconds"
+    ) &
+    DOWNLOAD_WATCHDOG_PID=$!
+
+    wait "$DOWNLOAD_PID"
+    DOWNLOAD_STATUS=$?
+    kill "$DOWNLOAD_WATCHDOG_PID" >/dev/null 2>&1
+    wait "$DOWNLOAD_WATCHDOG_PID" 2>/dev/null
+
+    return $DOWNLOAD_STATUS
 }
 
 logger() {
