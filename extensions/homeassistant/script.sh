@@ -105,8 +105,6 @@ while true; do
     echo "Check wifi connection"
     WLANNOTCONNECTED=0
     WLANCOUNTER=0
-    PINGNOTWORKING=0
-    PINGCOUNTER=0
     ERROR_SUSPEND=0
 
     ### wait for wifi
@@ -146,33 +144,6 @@ while true; do
             logger "Setting default gateway to ${ROUTERIP}"
         fi
 
-        if [ -n "${PINGHOST}" ]; then
-            echo "ping"
-
-            ### wait briefly for network reachability, but don't treat ping as the source of truth
-            while wait_ping; do
-                if [ ${PINGCOUNTER} -gt 5 ]; then
-                    logger "Ping not working, continuing with image download"
-                    logger "DEBUG ifconfig $(ifconfig ${NET})"
-                    CMSTATE=$(lipc-get-prop com.lab126.wifid cmState)
-                    logger "DEBUG cmState ${CMSTATE}"
-                    logger "DEBUG signalStrength $(lipc-get-prop com.lab126.wifid signalStrength)"
-                    break 1
-                fi
-                let PINGCOUNTER=PINGCOUNTER+1
-                logger "Waiting for working ping ${PINGCOUNTER}"
-                logger "Trying to set route gateway to ${ROUTERIP}"
-                route add default gw ${ROUTERIP}
-                sleep $PINGCOUNTER
-            done
-
-            if [ ${PINGCOUNTER} -le 5 ]; then
-                logger "Ping worked successfully"
-            fi
-        else
-            logger "PINGHOST is empty, skipping ping check"
-        fi
-
         echo "Downloading and drawing image"
         DOWNLOADRESULT=$(download_image 2>&1)
         DOWNLOADSTATUS=$?
@@ -188,6 +159,28 @@ while true; do
             eips -f -g ${SCREENSAVERFILE}
         else
             logger "Error updating screensaver"
+            DOWNLOAD_ERROR_IMAGE="${LIMGERR}"
+            CMSTATE=$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)
+            IFCONFIG_OUTPUT=$(ifconfig ${NET} 2>/dev/null)
+            GATEWAY=$(ip route | grep default | grep ${NET} | awk '{print $3}')
+            logger "DEBUG ifconfig ${IFCONFIG_OUTPUT}"
+            logger "DEBUG cmState ${CMSTATE}"
+            logger "DEBUG signalStrength $(lipc-get-prop com.lab126.wifid signalStrength 2>/dev/null)"
+            logger "DEBUG default gateway ${GATEWAY}"
+
+            if ! echo "${CMSTATE}" | grep CONNECTED >/dev/null 2>&1; then
+                logger "Download failed and wifi is not connected"
+                DOWNLOAD_ERROR_IMAGE="${LIMGERRWIFI}"
+            elif ! echo "${IFCONFIG_OUTPUT}" | grep "inet addr:" >/dev/null 2>&1; then
+                logger "Download failed and wifi has no IP address"
+                DOWNLOAD_ERROR_IMAGE="${LIMGERRWIFI}"
+            elif [ -z "${GATEWAY}" ]; then
+                logger "Download failed and no default gateway is configured"
+                DOWNLOAD_ERROR_IMAGE="${LIMGERRWIFI}"
+            else
+                logger "Download failed while wifi appears connected; treating as server/download error"
+            fi
+
             if [ -s "${SCREENSAVERFILE}" ]; then
                 logger "Keeping existing screen saver image after download error"
             else
@@ -195,12 +188,12 @@ while true; do
                     eips -c
                     sleep 1
                 fi
-                eips -f -g ${LIMGERR} #show error picture
+                eips -f -g ${DOWNLOAD_ERROR_IMAGE} #show error picture
             fi
             ERROR_SUSPEND=1       #short sleep time will be activated
         fi
 
-        rm ${TMPFILE} -f
+        rm -f "${TMPFILE}"
         logger "Removed temporary files"
 
         if [ ${CHECKBATTERY} -le ${BATTERYALERT} ]; then
