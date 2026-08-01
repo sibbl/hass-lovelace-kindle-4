@@ -49,7 +49,7 @@ There are two possibilities to SSH into your Kindle to change your config or deb
 1. The `extensions/homeassistant/startup.sh` sleeps 2 minutes until it starts the daemon on boot. On boot, you have time to SSH into your kindle.
 1. After drawing the image, the `extensions/homeassistant/script.sh` sleeps a short time until it suspends - see the `DELAY_BEFORE_SUSPEND` config option. This gives you time to SSH into your device and stop the daemon using `sh /mnt/us/extensions/homeassistant/daemon.sh stop`.
 
-For debugging purposes, `LOGGING` can be configured to `1` so that an extended log is written to `extensions/homeassistant/homeassistant.log`.
+For debugging purposes, `LOGGING` can be configured to `1` so that an extended log is written to `extensions/homeassistant/homeassistant.log`. The log rotates at 1 MiB and keeps three archives by default. Set `LOG_MAX_SIZE_BYTES` or `LOG_ROTATE_COUNT` in `config.sh` to override these defaults.
 
 ## Photo frame
 
