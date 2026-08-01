@@ -71,6 +71,45 @@ download_image() {
     return $DOWNLOAD_STATUS
 }
 
+rotate_log() {
+    LOG_MAX_SIZE_BYTES=${LOG_MAX_SIZE_BYTES:-1048576}
+    LOG_ROTATE_COUNT=${LOG_ROTATE_COUNT:-3}
+
+    [ -f "$LOGFILE" ] || return
+
+    case "$LOG_MAX_SIZE_BYTES" in
+    ''|*[!0-9]*)
+        return
+        ;;
+    esac
+
+    case "$LOG_ROTATE_COUNT" in
+    ''|*[!0-9]*|0)
+        return
+        ;;
+    esac
+
+    LOG_SIZE=$(ls -l "$LOGFILE" 2>/dev/null | awk '{print $5}')
+    case "$LOG_SIZE" in
+    ''|*[!0-9]*)
+        return
+        ;;
+    esac
+
+    [ "$LOG_SIZE" -lt "$LOG_MAX_SIZE_BYTES" ] && return
+
+    ROTATE_INDEX=$LOG_ROTATE_COUNT
+    while [ "$ROTATE_INDEX" -gt 1 ]; do
+        PREVIOUS_INDEX=$((ROTATE_INDEX - 1))
+        if [ -f "${LOGFILE}.${PREVIOUS_INDEX}" ]; then
+            mv -f "${LOGFILE}.${PREVIOUS_INDEX}" "${LOGFILE}.${ROTATE_INDEX}"
+        fi
+        ROTATE_INDEX=$PREVIOUS_INDEX
+    done
+
+    mv -f "$LOGFILE" "${LOGFILE}.1"
+}
+
 logger() {
     MSG=$1
 
@@ -84,5 +123,6 @@ logger() {
         return
     fi
 
+    rotate_log
     echo "$(date): $MSG" >>"$LOGFILE"
 }
