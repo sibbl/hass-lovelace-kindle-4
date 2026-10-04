@@ -4,7 +4,7 @@ export PATH
 
 # load config
 if [ -e "config.sh" ]; then
-    source ./config.sh
+    . ./config.sh
 else
     logger "Could not find config.sh in $(pwd)"
     echo "Could not find config.sh in $(pwd)"
@@ -13,7 +13,7 @@ fi
 
 # load utils
 if [ -e "utils.sh" ]; then
-    source ./utils.sh
+    . ./utils.sh
 else
     logger "Could not find utils.sh in $(pwd)"
     echo "Could not find utils.sh in $(pwd)"
@@ -48,7 +48,7 @@ while true; do
 	logger "Battery: isCharging=${IS_CHARGING} percentage=${CHECKBATTERY}% current=${CHECKCHARGECURRENT}mA" 
 
     if [ ${IS_CHARGING} -eq 1 ] && [ ${CHECKBATTERY} -le ${RESTART_POWERD_THRESHOLD} ] && [ ${CHECKCHARGECURRENT} -le 0 ]; then
-        let CHARGING_ERROR_COUNT=CHARGING_ERROR_COUNT+1
+        CHARGING_ERROR_COUNT=$((CHARGING_ERROR_COUNT + 1))
         logger "Charging current is negative, attempt ${CHARGING_ERROR_COUNT}"
         if [ ${CHECKBATTERY} -le ${BATTERYLOW} ]; then
             logger "Battery is critically low, attempting charging recovery immediately"
@@ -72,7 +72,7 @@ while true; do
         esac
 
         if [ ${CHARGING_REBOOT_COUNT} -lt ${CHARGING_REBOOT_LIMIT} ]; then
-            let CHARGING_REBOOT_COUNT=CHARGING_REBOOT_COUNT+1
+            CHARGING_REBOOT_COUNT=$((CHARGING_REBOOT_COUNT + 1))
             echo "${CHARGING_REBOOT_COUNT}" >"${CHARGING_RECOVERY_FILE}"
             logger "Charging did not recover, rebooting device (attempt ${CHARGING_REBOOT_COUNT}/${CHARGING_REBOOT_LIMIT})"
             sync
@@ -127,7 +127,7 @@ while true; do
             ERROR_SUSPEND=1 #short sleeptime will be activated
             break 1
         fi
-        let WLANCOUNTER=WLANCOUNTER+1
+        WLANCOUNTER=$((WLANCOUNTER + 1))
         logger "Waiting for wifi ${WLANCOUNTER}"
         sleep 2
     done
@@ -150,13 +150,13 @@ while true; do
         logger "Download result ${DOWNLOADRESULT}"
         echo "$DOWNLOADRESULT"
         if [ ${DOWNLOADSTATUS} -eq 0 ]; then
-            mv $TMPFILE $SCREENSAVERFILE
+            mv "$TMPFILE" "$SCREENSAVERFILE"
             logger "Screen saver image file updated"
             if [ ${CLEAR_SCREEN_BEFORE_RENDER} -eq 1 ]; then
                 eips -c
                 sleep 1
             fi
-            eips -f -g ${SCREENSAVERFILE}
+            eips -f -g "${SCREENSAVERFILE}"
         else
             logger "Error updating screensaver"
             DOWNLOAD_ERROR_IMAGE="${LIMGERR}"
@@ -206,7 +206,7 @@ while true; do
     echo "Calculate next timer and going to sleep"
 
     if [ ${ERROR_SUSPEND} -eq 1 ]; then
-        let GLOBAL_ERROR_COUNT=GLOBAL_ERROR_COUNT+1
+        GLOBAL_ERROR_COUNT=$((GLOBAL_ERROR_COUNT + 1))
         TODAY=$(date +%s)
         WAKEUPTIME=$((${TODAY} + ${INTERVAL_ON_ERROR} - ${DELAY_BEFORE_SUSPEND}))
         logger "An error has occurred, will try again on ${WAKEUPTIME}"
