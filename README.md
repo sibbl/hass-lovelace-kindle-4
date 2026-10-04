@@ -20,7 +20,7 @@ Hints:
 
 **Finally**, You should end up with a URL pointing to the exposed port of the rendering docker container to configure this on your kindle as described in the following section.
 
-This URL needs to be plain HTTP as no TLS or SSL is supported by the Kindle 4. If your server is HTTPS only (which is a good thing!), I recommend using a free CDN like [Hostry](https://www.hostry.com).
+This URL needs to be plain HTTP as no TLS or SSL is supported by the Kindle 4. Keep this HTTP endpoint on a trusted private network. Dashboard images and Basic Auth credentials are visible to anyone who can observe that traffic; Basic Auth does not encrypt it. If your renderer is HTTPS-only, use a local proxy on your private network rather than exposing the dashboard through a public CDN.
 
 ## Hardware
 
@@ -50,6 +50,10 @@ There are two possibilities to SSH into your Kindle to change your config or deb
 1. After drawing the image, the `extensions/homeassistant/script.sh` sleeps a short time until it suspends - see the `DELAY_BEFORE_SUSPEND` config option. This gives you time to SSH into your device and stop the daemon using `sh /mnt/us/extensions/homeassistant/daemon.sh stop`.
 
 For debugging purposes, `LOGGING` can be configured to `1` so that an extended log is written to `extensions/homeassistant/homeassistant.log`. The log rotates at 1 MiB and keeps three archives by default. Set `LOG_MAX_SIZE_BYTES` or `LOG_ROTATE_COUNT` in `config.sh` to override these defaults.
+
+Downloads have a 45-second deadline (`DOWNLOAD_TIMEOUT` can override it), and a file-size limit of at most 2 MiB (1 MiB on shells using 512-byte blocks). Failed or empty downloads preserve the previous image. Download diagnostics omit server output to keep credential-bearing URLs out of logs.
+
+Daemon control checks process ownership and serializes start/stop operations. If a control command is forcibly killed and leaves `homeassistant.pid.lock` behind, first confirm no start/stop command is running, then remove that empty directory with `rmdir`.
 
 ## Photo frame
 

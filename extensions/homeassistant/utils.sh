@@ -19,24 +19,37 @@ wait_wlan() {
     return $(lipc-get-prop com.lab126.wifid cmState | grep CONNECTED | wc -l)
 }
 
+# Redirect the watchdog's descriptors so a successful download cannot leave
+# command substitution waiting for an inherited output pipe. Reap its sleep too.
+run_with_timeout() (
+    TIMEOUT_SECONDS=$1
+    shift
+    "$@" &
+    WORK_PID=$!
+    (
+        trap 'kill "$TIMER_PID" 2>/dev/null; wait "$TIMER_PID" 2>/dev/null' 0
+        trap 'exit 0' HUP INT TERM
+        sleep "$TIMEOUT_SECONDS" &
+        TIMER_PID=$!
+        wait "$TIMER_PID"
+        kill "$WORK_PID" 2>/dev/null
+    ) </dev/null >/dev/null 2>&1 &
+    WATCHDOG_PID=$!
+    trap 'kill "$WORK_PID" "$WATCHDOG_PID" 2>/dev/null; wait "$WORK_PID" "$WATCHDOG_PID" 2>/dev/null' 0
+    trap 'exit 1' HUP INT TERM
+    wait "$WORK_PID"
+    RESULT=$?
+    kill "$WATCHDOG_PID" 2>/dev/null
+    wait "$WATCHDOG_PID" 2>/dev/null
+    # The worker has been reaped: do not signal its PID again from the exit trap.
+    trap - 0
+    return "$RESULT"
+)
+
 wait_ping() {
     CONNECTED=0
-    PING_TIMEOUT_SECONDS=${PING_TIMEOUT:-10}
-    /bin/ping -c 1 "$PINGHOST" >/dev/null 2>&1 &
-    PING_PID=$!
-    (
-        sleep "$PING_TIMEOUT_SECONDS"
-        kill "$PING_PID" >/dev/null 2>&1
-    ) &
-    PING_WATCHDOG_PID=$!
-
-    wait "$PING_PID"
-    PING_STATUS=$?
-    kill "$PING_WATCHDOG_PID" >/dev/null 2>&1
-    wait "$PING_WATCHDOG_PID" 2>/dev/null
-
-    [ "$PING_STATUS" -eq 0 ] && CONNECTED=1
-    return $CONNECTED
+    run_with_timeout "${PING_TIMEOUT:-10}" /bin/ping -c 1 "$PINGHOST" >/dev/null 2>&1 && CONNECTED=1
+    return "$CONNECTED"
 }
 
 download_image() {
@@ -55,20 +68,20 @@ download_image() {
         esac
     fi
 
-    wget -q "$DOWNLOAD_URI" -O "$TMPFILE" &
-    DOWNLOAD_PID=$!
-    (
-        sleep "$DOWNLOAD_TIMEOUT_SECONDS"
-        kill "$DOWNLOAD_PID" >/dev/null 2>&1 && echo "Download timed out after ${DOWNLOAD_TIMEOUT_SECONDS} seconds"
-    ) &
-    DOWNLOAD_WATCHDOG_PID=$!
-
-    wait "$DOWNLOAD_PID"
+    # Bound disk consumption even if a server streams indefinitely. Shells use
+    # 512- or 1024-byte blocks, so this caps the file at no more than 2 MiB.
+    # Apply the limit only to wget, not to the dashboard's log files.
+    run_with_timeout "$DOWNLOAD_TIMEOUT_SECONDS" sh -c '
+        ulimit -f 2048 || exit 1
+        exec wget -q "$1" -O "$2"
+    ' sh "$DOWNLOAD_URI" "$TMPFILE" >/dev/null 2>&1
     DOWNLOAD_STATUS=$?
-    kill "$DOWNLOAD_WATCHDOG_PID" >/dev/null 2>&1
-    wait "$DOWNLOAD_WATCHDOG_PID" 2>/dev/null
-
-    return $DOWNLOAD_STATUS
+    if [ "$DOWNLOAD_STATUS" -ne 0 ] || [ ! -s "$TMPFILE" ]; then
+        rm -f "$TMPFILE"
+        echo "Image download failed, timed out, or exceeded the size limit"
+        return 1
+    fi
+    return 0
 }
 
 rotate_log() {
